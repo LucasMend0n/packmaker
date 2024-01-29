@@ -13,17 +13,14 @@ namespace packmaker
             string repoPath = Console.ReadLine();
             Console.Write("Digite a branch que deseja comparar: ");
             string branch = Console.ReadLine();
-            Console.Write("Digite o caminho para a saída do zip: ");
-            string finalZipPath = Console.ReadLine();
             Console.Write("Digite o nome do arquivo zip: ");
-            string zipFile = Console.ReadLine();
-            Console.Write("Digite o nome do arquivo que vai conter as procedures: ");
-            string txtFileName = Console.ReadLine();
+            string folderBaseName = Console.ReadLine();
+            string finalZipPath = @"C:/packmaker_out";
 
-            //string repoPath = @"C:/inetpub/wwwroot/SH0743_GSS_HOSP";
+            //string repoPath = @"C:/dev/SH0743_GSS_HOSP";
             //string branch = "main";
-            //string finalZipPath = @"C:/Dev/packmaker_out";
-            //string zipFile = "packmaker_testZip";
+            //string repoPath = @"C:/inetpub/wwwroot/SH0743_GSS_HOSP";
+            //string folderBaseName = "packmaker_testZip";
             //string txtFileName = "proceduresFound";
 
             Console.WriteLine("Obtendo arquivos....");
@@ -40,14 +37,24 @@ namespace packmaker
 
             List<string> procedureCalls = FindProcedureCalls(repoPath, aspFiles);
 
-            Console.WriteLine($"Chamadas de procedures encontradas, serão adicionadas ao arquivo: {txtFileName}.txt");
+            if(procedureCalls.Count != 0)
+            {
+                Console.WriteLine($"Chamadas de procedures encontradas! Elas serão adicionadas ao arquivo: {folderBaseName}.txt");
+                string txtPathFile = Path.Combine(finalZipPath, $"{folderBaseName}_procs.txt").Replace("/","\\");
+                FileInfo fileInfo = new FileInfo(txtPathFile);
+                fileInfo.Directory.Create();
+                File.WriteAllLines(txtPathFile, procedureCalls); 
+            }
+            else
+            {
+                Console.WriteLine("Nenhuma procedure encontrada!"); 
+            }
 
-            string txtPathFile = Path.Combine(finalZipPath, $"{txtFileName}.txt");
-            File.AppendAllLines(txtPathFile, procedureCalls); 
+
 
             Console.WriteLine("Iniciando montagem do zip....");
 
-            CriarZip(repoPath, modifiedFiles, finalZipPath, zipFile);
+            CriarZip(repoPath, modifiedFiles, finalZipPath, folderBaseName);
 
             Console.WriteLine("Compressão dos arquivos finalizada!");
 
@@ -110,6 +117,7 @@ namespace packmaker
 
         static void CriarZip(string rootPath, List<string> files, string zipFilePath, string zipFileName)
         {
+
             using (var zipArchive = ZipFile.Open(zipFilePath + $"\\{zipFileName}.zip", ZipArchiveMode.Create))
             {
                 foreach (var file in files)
