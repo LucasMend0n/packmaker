@@ -32,6 +32,10 @@ namespace packmaker
                 Console.WriteLine("Nenhum arquivo obtido. Programa encerrado.");
                 return;
             }
+            else
+            {
+                Console.WriteLine("Arquivos obtidos!");
+            }
 
             Console.WriteLine("Procurando por chamadas de procedures...");
 
@@ -84,7 +88,6 @@ namespace packmaker
                 }
                 process.WaitForExit(); 
 ;            }
-            Console.WriteLine("Arquivos obtidos!");
             return modifiedFiles;
 
         }
@@ -101,10 +104,25 @@ namespace packmaker
                     for (int i = 0; i < lines.Length; i++)
                     {
                         string line = lines[i];
-                        if(line.Contains("p_", StringComparison.OrdinalIgnoreCase))
+                        int start = 0; 
+                        while(start < line.Length)
                         {
-                            procedureCalls.Add($"Arquivo: {file}, Linha: {i + 1 }, Conteudo: {line.Trim()}");
+                            start = line.IndexOf("p_",start,StringComparison.OrdinalIgnoreCase); 
+                            if (start < 0)
+                            {
+                                break; 
+                            }
+                            int end = line.IndexOf(' ', start); 
+                            if (end < 0)
+                            {
+                                end = line.Length;
+                            }
+
+                            string storedProcedure = line.Substring(start, end - start).Trim();
+                            procedureCalls.Add($"Arquivo: {file} | Linha: {i + 1 } | Procedure: {storedProcedure}");
+                            start = end;
                         }
+ 
                     }
                 }
                 catch (Exception ex)
