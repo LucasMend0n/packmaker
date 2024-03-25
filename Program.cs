@@ -9,71 +9,89 @@ namespace packmaker
     {
         static void Main()
         {
-            Console.Write("Digite o caminho para o repositório Git: ");
-            string repoPath = Console.ReadLine();
-            Console.Write("Digite a branch que deseja comparar: ");
-            string branch = Console.ReadLine();
-            Console.Write("Digite o nome do arquivo zip: ");
-            string folderBaseName = Console.ReadLine();
-            string finalZipPath = @"C:/packmaker_out";
+            int loop = 0;   
+            while (loop == 0) {
 
-            //string repoPath = @"C:/dev/SH0743_GSS_HOSP";
-            //string branch = "main";
-            //string repoPath = @"C:/inetpub/wwwroot/SH0743_GSS_HOSP";
-            //string folderBaseName = "packmaker_testZip";
-            //string txtFileName = "proceduresFound";
+                Console.Write("Digite o caminho para o repositório Git: ");
+                string repoPath = Console.ReadLine();
+                Console.Write("Digite a configuração do Git Diff: ");
+                string config = Console.ReadLine();
+                Console.Write("Digite o nome do arquivo zip: ");
+                string folderBaseName = Console.ReadLine();
+                string finalZipPath = @"C:/packmaker_out/" + $"{folderBaseName}";
 
-            Console.WriteLine("Obtendo arquivos....");
-            List<string> modifiedFiles = GetModifiedFiles(repoPath, branch);
-            List<string> aspFiles = modifiedFiles.Where(file => file.EndsWith(".asp", StringComparison.OrdinalIgnoreCase)).ToList();
-            
-            if(modifiedFiles.Count == 0)
-            {
-                Console.WriteLine("Nenhum arquivo obtido. Programa encerrado.");
-                return;
-            }
-            else
-            {
-                Console.WriteLine("Arquivos obtidos!");
-            }
+                //string repoPath = @"C:/dev/SH0743_GSS_HOSP";
+                //string repoPath = @"C:/inetpub/wwwroot/SH0743_GSS_HOSP";
+                //string branch = "main";
+                //string folderBaseName = "packmaker_testZip";
+                //string txtFileName = "proceduresFound";
 
-            Console.WriteLine("Procurando por chamadas de procedures...");
+                Console.WriteLine("Criando pasta destino...");
 
-            List<string> procedureCalls = FindProcedureCalls(repoPath, aspFiles);
+                Directory.CreateDirectory(finalZipPath);
 
-            if(procedureCalls.Count != 0)
-            {
-                Console.WriteLine($"Chamadas de procedures encontradas! Elas serão adicionadas ao arquivo: {folderBaseName}.txt");
-                string txtPathFile = Path.Combine(finalZipPath, $"{folderBaseName}_procs.txt").Replace("/","\\");
+                Console.WriteLine("Obtendo arquivos....");
+
+                List<string> modifiedFiles = GetModifiedFiles(repoPath, config);
+                List<string> aspFiles = modifiedFiles.Where(file => file.EndsWith(".asp", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                if (modifiedFiles.Count == 0)
+                {
+                    Console.WriteLine("Nenhum arquivo obtido. Programa encerrado.");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("Arquivos obtidos!");
+                    string modifiedFilesPath = Path.Combine(finalZipPath, $"{folderBaseName}_files.txt").Replace("/", "\\");
+                    File.WriteAllLines(modifiedFilesPath, modifiedFiles);
+                }
+
+                Console.WriteLine("Procurando por chamadas de procedures...");
+
+                List<string> procedureCalls = FindProcedureCalls(repoPath, aspFiles);
+                string txtPathFile = Path.Combine(finalZipPath, $"{folderBaseName}_procs.txt").Replace("/", "\\");
+
+                if (procedureCalls.Count != 0)
+                {
+                    Console.WriteLine($"Chamadas de procedures encontradas! Elas serão adicionadas ao arquivo: {folderBaseName}.txt");
+                    File.WriteAllLines(txtPathFile, procedureCalls);
+                }
+                else
+                {
+                    Console.WriteLine("Nenhuma procedure encontrada!");
+                }
+
                 FileInfo fileInfo = new FileInfo(txtPathFile);
                 fileInfo.Directory.Create();
-                File.WriteAllLines(txtPathFile, procedureCalls); 
+
+                Console.WriteLine("Iniciando montagem do zip....");
+
+                CriarZip(repoPath, modifiedFiles, finalZipPath, folderBaseName);
+
+                Console.WriteLine("Compressão dos arquivos finalizada!");
+
+                string zipFolder = finalZipPath.Replace("/", "\\");
+
+                Process.Start("explorer.exe", zipFolder);
+
+                Console.WriteLine("Deseja converter novo pack? [y/n]");
+                var resp = Console.ReadLine();
+
+                if (resp == "n")
+                {
+                    loop = 1;
+                }
             }
-            else
-            {
-                Console.WriteLine("Nenhuma procedure encontrada!"); 
-            }
-
-
-
-            Console.WriteLine("Iniciando montagem do zip....");
-
-            CriarZip(repoPath, modifiedFiles, finalZipPath, folderBaseName);
-
-            Console.WriteLine("Compressão dos arquivos finalizada!");
-
-            string zipFolder = finalZipPath.Replace("/","\\");
-
-            Process.Start("explorer.exe", zipFolder);
 
         }
-        static List<string> GetModifiedFiles(string repoPath, string branch)
+        static List<string> GetModifiedFiles(string repoPath, string content)
         {
             List<string> modifiedFiles = new List<string>();
             using (var process = new Process())
             {
                 process.StartInfo.FileName = "git";
-                process.StartInfo.Arguments = $"diff --name-only ..{branch}"; 
+                process.StartInfo.Arguments = $"diff --name-only {content}"; 
                 process.StartInfo.WorkingDirectory = repoPath;
                 process.StartInfo.RedirectStandardOutput = true;
                 process.StartInfo.UseShellExecute = false;
@@ -119,7 +137,7 @@ namespace packmaker
                             }
 
                             string storedProcedure = line.Substring(start, end - start).Trim();
-                            procedureCalls.Add($"Arquivo: {file} | Linha: {i + 1 } | Procedure: {storedProcedure}");
+                            procedureCalls.Add($"Procedure: {storedProcedure} | Arquivo: {file} | Linha: {i + 1 }");
                             start = end;
                         }
  
